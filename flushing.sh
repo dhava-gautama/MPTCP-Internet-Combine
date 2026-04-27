@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "Cleaning up networking..."
-
+IP_PUBLIC="" #IP Publik VPS
 # 1. Clear MPTCP
 ip mptcp endpoint flush
 ip mptcp limits set subflows 0 add_addr_accepted 0
@@ -12,7 +12,6 @@ done
 
 # 3. Clear Custom Route Tables
 ip route flush table 100 2>/dev/null
-ip route flush table 102 2>/dev/null
 
 # 4. Reset IPTables
 iptables -F
@@ -26,6 +25,6 @@ iptables -P FORWARD ACCEPT
 iptables -P OUTPUT ACCEPT
 
 # 5. Reset Routing khusus VPS (jika ada)
-ip route del 168.110.213.113 2>/dev/null
+ip route del $IP_PUBLIC 2>/dev/null
 
 echo "Network flushed. System is clean."

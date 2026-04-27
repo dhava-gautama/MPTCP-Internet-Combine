@@ -1,37 +1,47 @@
-VPS_IP = "" #your server public IP
-IP1 = "10.0.10.93" #your client IP on eth0
-IP2 = "10.0.3.123" #your client IP on eth1
-WG2 = "10.0.3.1" #ether2 router gateway
-interface1 = "eth0"
-interface2 = "eth1"
-socat_port = "8888" #port to forward MPTCP traffic to sing-box
-socat_internal_port = "8081" #port sing-box listen to
+VPS_IP="" #your server public IP
+IP1="10.0.10.93" #your client IP on eth0
+IP2="10.0.3.123" #your client IP on eth1
+GATEWAY2="10.0.3.1" #ether2 router gateway
+interface1="eth0"
+interface2="eth1"
+socat_port="8888" #port to forward MPTCP traffic to sing-box
+socat_internal_port="8081" #port sing-box listen to
 
-echo "STEP 1: Disabling Reverse Path Filtering (rp_filter) on eth0 and eth1..."
+echo "STEP 1: Paste WireGuard config dari server, install WireGuard, lalu start service"
+sudo apt-get update
+sudo apt-get install -y wireguard
+sudo mkdir -p /etc/wireguard
+echo "Paste config WireGuard client dari server ke /etc/wireguard/wg0.conf, lalu tekan Ctrl+D:"
+sudo tee /etc/wireguard/wg0.conf >/dev/null
+sudo chmod 600 /etc/wireguard/wg0.conf
+sudo systemctl enable wg-quick@wg0.service
+sudo systemctl restart wg-quick@wg0.service
+
+echo "STEP 2: Disabling Reverse Path Filtering (rp_filter) on eth0 and eth1..."
 sudo sysctl -w net.ipv4.conf.$interface1.rp_filter=0
 sudo sysctl -w net.ipv4.conf.$interface2.rp_filter=0
 sudo sysctl -w net.ipv4.conf.all.rp_filter=0
 
-echo "STEP 2: Enabling MPTCP..."
+echo "STEP 3: Enabling MPTCP..."
 sysctl -w net.mptcp.enabled=1
 
-echo "STEP 3: Setting MPTCP Limits..."
+echo "STEP 4: Setting MPTCP Limits..."
 ip mptcp limits set subflows 2 add_addr_accepted 2
 
-echo "STEP 4: Adding MPTCP Endpoints for Subflows..."
+echo "STEP 5: Adding MPTCP Endpoints for Subflows..."
 ip mptcp endpoint add $IP1 dev $interface1 id 1 subflow
 ip mptcp endpoint add $IP2 dev $interface2 id 2 subflow
 
-echo "STEP 5: Setting Up Custom Routes..."
-ip route add $VPS_IP via $WG2 dev $interface2
+echo "STEP 6: Setting Up Custom Routes..."
+ip route add $VPS_IP via $GATEWAY2 dev $interface2
 
 
-echo "STEP 6: Configuring IPTables MASQUERADE..."
+echo "STEP 7: Configuring IPTables MASQUERADE..."
 sudo iptables -t nat -F
 sudo iptables -t nat -A POSTROUTING -o $interface1 -j MASQUERADE
 sudo iptables -t nat -A POSTROUTING -o $interface2 -j MASQUERADE
 
-echo "STEP 7: Installing Sing-Box..."
+echo "STEP 8: Installing Sing-Box..."
 sudo mkdir -p /etc/apt/keyrings &&
    sudo curl -fsSL https://sing-box.app/gpg.key -o /etc/apt/keyrings/sagernet.asc &&
    sudo chmod a+r /etc/apt/keyrings/sagernet.asc &&
@@ -46,7 +56,7 @@ Signed-By: /etc/apt/keyrings/sagernet.asc
    sudo apt-get update &&
    sudo apt-get install sing-box # or sing-box-beta
 
-echo "STEP 8: Configuring Sing-Box..."
+echo "STEP 9: Configuring Sing-Box..."
 sudo tee /etc/sing-box/config.json >/dev/null <<'EOF'
 {
   "inbounds": [
@@ -77,10 +87,10 @@ sudo tee /etc/sing-box/config.json >/dev/null <<'EOF'
 }
 EOF
 
-echo "STEP 9: install socat"
+echo "STEP 10: install socat"
 sudo apt install socat -y
 
-echo "STEP 10: Installing and Starting Services..."
+echo "STEP 11: Installing and Starting Services..."
 
 # 1. Sing-box Service
 sudo tee /etc/systemd/system/sing-box.service >/dev/null <<EOF

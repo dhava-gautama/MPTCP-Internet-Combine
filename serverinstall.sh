@@ -1,11 +1,39 @@
-PUBLIC_IP ="" #IP Publik VPS
-interface ="enp0s6"
-Socat_Port = "8888" #to client MPTCP traffic
-socat_internal_port = "8080" #to sing-box
+PUBLIC_IP="" # IP Publik VPS
+interface="enp0s6"
+Socat_Port="8888" # to client MPTCP traffic
+socat_internal_port="8080" # to sing-box
+WG_PORT="51820"
+
 echo "STEP 1: Disabling Reverse Path Filtering (rp_filter)"
 sysctl -w net.mptcp.enabled=1
 sysctl -w net.ipv4.ip_forward=1
 sudo sysctl -w net.ipv4.conf.all.rp_filter=0
+
+echo "STEP 1.5: Installing and Configuring WireGuard"
+sudo apt-get update
+sudo apt-get install -y wireguard
+sudo mkdir -p /etc/wireguard
+
+SERVER_PRIVATE_KEY="$(wg genkey)"
+SERVER_PUBLIC_KEY="$(printf '%s' "$SERVER_PRIVATE_KEY" | wg pubkey)"
+CLIENT_PRIVATE_KEY="$(wg genkey)"
+CLIENT_PUBLIC_KEY="$(printf '%s' "$CLIENT_PRIVATE_KEY" | wg pubkey)"
+
+# Overwrite wg0.conf if already exists.
+sudo tee /etc/wireguard/wg0.conf >/dev/null <<EOF
+[Interface]
+PrivateKey = $SERVER_PRIVATE_KEY
+Address = 10.8.0.1/24
+ListenPort = $WG_PORT
+
+[Peer]
+PublicKey = $CLIENT_PUBLIC_KEY
+AllowedIPs = 10.8.0.2/32
+EOF
+
+sudo chmod 600 /etc/wireguard/wg0.conf
+sudo systemctl enable wg-quick@wg0.service
+sudo systemctl restart wg-quick@wg0.service
 
 echo "STEP 2: Setting MPTCP Limits"
 ip mptcp limits set subflows 2 add_addr_accepted 2
@@ -81,4 +109,20 @@ RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
+EOF
+
+echo "STEP 9: Client WireGuard config (ready untuk dipaste di client)"
+echo "root@mamad:~# cat /etc/wireguard/wg0.conf"
+cat <<EOF
+[Interface]
+PrivateKey = $CLIENT_PRIVATE_KEY
+Address = 10.8.0.2/24
+DNS = 8.8.8.8
+
+[Peer]
+PublicKey = $SERVER_PUBLIC_KEY
+AllowedIPs = 0.0.0.0/0
+Endpoint = $PUBLIC_IP:$WG_PORT
+PersistentKeepalive = 10
+ready untuk dipaste di client
 EOF
