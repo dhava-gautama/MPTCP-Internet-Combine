@@ -1,8 +1,28 @@
+#!/usr/bin/env bash
+
 PUBLIC_IP="" # IP Publik VPS
 interface="enp0s6"
 Socat_Port="8888" # to client MPTCP traffic
 socat_internal_port="8080" # to sing-box
 WG_PORT="51820"
+
+set -Eeuo pipefail
+trap 'echo "ERROR: Install server gagal di baris $LINENO." >&2' ERR
+
+require_var() {
+  local name="$1"
+  local value="${!name:-}"
+  if [[ -z "$value" ]]; then
+    echo "ERROR: Kolom $name belum diisi. Isi semua kolom wajib sebelum STEP 1." >&2
+    exit 1
+  fi
+}
+
+require_var "PUBLIC_IP"
+require_var "interface"
+require_var "Socat_Port"
+require_var "socat_internal_port"
+require_var "WG_PORT"
 
 echo "STEP 1: Disabling Reverse Path Filtering (rp_filter)"
 sysctl -w net.mptcp.enabled=1

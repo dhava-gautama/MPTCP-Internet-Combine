@@ -1,11 +1,34 @@
+#!/usr/bin/env bash
+
 VPS_IP="" #your server public IP
-IP1="10.0.10.93" #your client IP on eth0
-IP2="10.0.3.123" #your client IP on eth1
-GATEWAY2="10.0.3.1" #ether2 router gateway
-interface1="eth0"
-interface2="eth1"
+IP1="" #your client IP on eth0
+IP2="" #your client IP on eth1
+GATEWAY2="" #ether2 router gateway
+interface1=""
+interface2=""
 socat_port="8888" #port to forward MPTCP traffic to sing-box
 socat_internal_port="8081" #port sing-box listen to
+
+set -Eeuo pipefail
+trap 'echo "ERROR: Install client gagal di baris $LINENO." >&2' ERR
+
+require_var() {
+  local name="$1"
+  local value="${!name:-}"
+  if [[ -z "$value" ]]; then
+    echo "ERROR: Kolom $name belum diisi. Isi semua kolom wajib sebelum STEP 1." >&2
+    exit 1
+  fi
+}
+
+require_var "VPS_IP"
+require_var "IP1"
+require_var "IP2"
+require_var "GATEWAY2"
+require_var "interface1"
+require_var "interface2"
+require_var "socat_port"
+require_var "socat_internal_port"
 
 echo "STEP 1: Paste WireGuard config dari server, install WireGuard, lalu start service"
 sudo apt-get update
