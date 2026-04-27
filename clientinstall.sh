@@ -65,7 +65,7 @@ ip mptcp endpoint add $IP1 dev $interface1 id 1 subflow
 ip mptcp endpoint add $IP2 dev $interface2 id 2 subflow
 
 echo "STEP 6: Setting Up Custom Routes..."
-ip route add $VPS_IP via $GATEWAY2 dev $interface2
+ip route replace $VPS_IP via $GATEWAY2 dev $interface2
 
 
 echo "STEP 7: Configuring IPTables MASQUERADE..."
@@ -146,9 +146,11 @@ Description=Socat MPTCP Client Bridge
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/mptcpize run /usr/bin/socat TCP4-LISTEN:$socat_port,fork,reuseaddr TCP4:168.110.213.113:$socat_internal_port
+ExecStart=/usr/bin/mptcpize run /usr/bin/socat TCP4-LISTEN:$socat_internal_port,fork,reuseaddr TCP4:168.110.213.113:$socat_port
 Restart=always
 RestartSec=5s
+SuccessExitStatus=143
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=multi-user.target
