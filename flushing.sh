@@ -1,6 +1,19 @@
 #!/bin/bash
 echo "Cleaning up networking..."
 IP_PUBLIC="" #IP Publik VPS
+GATEWAY2="" #ether2 router gateway
+require_var() {
+  local name="$1"
+  local value="${!name:-}"
+  if [[ -z "$value" ]]; then
+    echo "ERROR: Kolom $name belum diisi. Isi semua kolom wajib sebelum STEP 1." >&2
+    exit 1
+  fi
+}
+
+require_var "IP_PUBLIC"
+require_var "GATEWAY2"
+
 # 1. Clear MPTCP
 ip mptcp endpoint flush
 ip mptcp limits set subflows 0 add_addr_accepted 0
@@ -12,6 +25,7 @@ done
 
 # 3. Clear Custom Route Tables
 ip route flush table 100 2>/dev/null
+ip route del $IP_PUBLIC via $GATEWAY2 dev $interface2
 
 # 4. Reset IPTables
 iptables -F

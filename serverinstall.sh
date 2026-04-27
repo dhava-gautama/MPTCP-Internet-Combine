@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 PUBLIC_IP="" # IP Publik VPS
-interface="enp0s6"
+interface=""
 Socat_Port="8888" # to client MPTCP traffic
 socat_internal_port="8080" # to sing-box
 WG_PORT="51820"
@@ -78,7 +78,7 @@ Signed-By: /etc/apt/keyrings/sagernet.asc
    sudo apt-get install sing-box # or sing-box-beta
 
 echo "STEP 5: Configuring Sing-Box"
-sudo tee /etc/sing-box/config.json >/dev/null <<'EOF'
+sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
   "log": { "level": "info" },
   "inbounds": [
@@ -134,6 +134,8 @@ EOF
 echo "STEP 9: Client WireGuard config (ready untuk dipaste di client)"
 echo "root@mamad:~# cat /etc/wireguard/wg0.conf"
 cat <<EOF
+ready untuk dipaste di client
+
 [Interface]
 PrivateKey = $CLIENT_PRIVATE_KEY
 Address = 10.8.0.2/24
@@ -144,5 +146,5 @@ PublicKey = $SERVER_PUBLIC_KEY
 AllowedIPs = 0.0.0.0/0
 Endpoint = $PUBLIC_IP:$WG_PORT
 PersistentKeepalive = 10
-ready untuk dipaste di client
+
 EOF
