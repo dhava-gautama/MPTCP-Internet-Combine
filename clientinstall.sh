@@ -147,7 +147,7 @@ Description=Socat MPTCP Client Bridge
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/mptcpize run /usr/bin/socat TCP4-LISTEN:$socat_internal_port,fork,reuseaddr TCP4:168.110.213.113:$socat_port
+ExecStart=/usr/bin/mptcpize run /usr/bin/socat TCP4-LISTEN:$socat_internal_port,fork,reuseaddr TCP4:$VPS_IP:$socat_port
 Restart=always
 RestartSec=5s
 SuccessExitStatus=143
