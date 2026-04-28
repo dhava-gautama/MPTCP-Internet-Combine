@@ -56,7 +56,6 @@ EOF
 sudo chmod 600 /etc/wireguard/wg0.conf
 sudo systemctl enable wg-quick@wg0.service
 sudo systemctl restart wg-quick@wg0.service
-sudo apt install mptcpize -y
 echo "STEP 2: Setting MPTCP Limits"
 ip mptcp limits set subflows 2 add_addr_accepted 2
 
