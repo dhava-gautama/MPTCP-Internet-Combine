@@ -35,7 +35,7 @@ echo "STEP 1.5: Installing and Configuring WireGuard"
 sudo apt-get update
 sudo apt-get install -y wireguard
 sudo mkdir -p /etc/wireguard
-
+sudo apt install mptcpize -y
 SERVER_PRIVATE_KEY="$(wg genkey)"
 SERVER_PUBLIC_KEY="$(printf '%s' "$SERVER_PRIVATE_KEY" | wg pubkey)"
 CLIENT_PRIVATE_KEY="$(wg genkey)"
@@ -56,7 +56,7 @@ EOF
 sudo chmod 600 /etc/wireguard/wg0.conf
 sudo systemctl enable wg-quick@wg0.service
 sudo systemctl restart wg-quick@wg0.service
-
+sudo apt install mptcpize -y
 echo "STEP 2: Setting MPTCP Limits"
 ip mptcp limits set subflows 2 add_addr_accepted 2
 

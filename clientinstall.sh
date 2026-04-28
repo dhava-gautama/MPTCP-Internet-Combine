@@ -48,6 +48,7 @@ EOF
 sudo chmod 600 /etc/wireguard/wg0.conf
 sudo systemctl enable wg-quick@wg0.service
 sudo systemctl restart wg-quick@wg0.service
+sudo apt install mptcpize -y
 
 echo "STEP 2: Disabling Reverse Path Filtering (rp_filter) on eth0 and eth1..."
 sudo sysctl -w net.ipv4.conf.$interface1.rp_filter=0
