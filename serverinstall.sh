@@ -29,6 +29,8 @@ sysctl -w net.mptcp.enabled=1
 sysctl -w net.ipv4.ip_forward=1
 sudo sysctl -w net.ipv4.conf.all.rp_filter=0
 
+
+
 echo "STEP 1.5: Installing and Configuring WireGuard"
 sudo apt-get update
 sudo apt-get install -y wireguard
@@ -131,7 +133,36 @@ RestartSec=5s
 WantedBy=multi-user.target
 EOF
 
-echo "STEP 9: Client WireGuard config (ready untuk dipaste di client)"
+echo "STEP 9: Enabling IP Forwarding and Setting up iptables MASQUERADE"
+# Ensure iptables and persistence tools are installed (non-interactive)
+sudo apt-get update
+sudo apt-get install -y iptables iptables-persistent netfilter-persistent || true
+
+# NAT ke interface eksternal (hanya tambah jika belum ada)
+if ! sudo iptables -t nat -C POSTROUTING -o "$interface" -j MASQUERADE 2>/dev/null; then
+  sudo iptables -t nat -A POSTROUTING -o "$interface" -j MASQUERADE
+fi
+
+# NAT untuk wg0
+if ! sudo iptables -t nat -C POSTROUTING -o wg0 -j MASQUERADE 2>/dev/null; then
+  sudo iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
+fi
+
+# Forward rules (hanya tambah jika belum ada)
+if ! sudo iptables -C FORWARD -i "$interface" -o wg0 -j ACCEPT 2>/dev/null; then
+  sudo iptables -A FORWARD -i "$interface" -o wg0 -j ACCEPT
+fi
+if ! sudo iptables -C FORWARD -i wg0 -o "$interface" -j ACCEPT 2>/dev/null; then
+  sudo iptables -A FORWARD -i wg0 -o "$interface" -j ACCEPT
+fi
+
+sudo iptables-save > /etc/iptables/rules.v4
+sudo ip6tables-save > /etc/iptables/rules.v6 2>/dev/null || true
+if command -v netfilter-persistent >/dev/null 2>&1; then
+  sudo netfilter-persistent save || true
+fi
+
+echo "STEP 10: Client WireGuard config (ready untuk dipaste di client)"
 echo "root@mamad:~# cat /etc/wireguard/wg0.conf"
 cat <<EOF
 ready untuk dipaste di client
