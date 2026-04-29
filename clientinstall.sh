@@ -101,14 +101,36 @@ Signed-By: /etc/apt/keyrings/sagernet.asc
 echo "STEP 9: Configuring Sing-Box..."
 sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
+  "dns": {
+    "servers": [
+      {
+        "tag": "google-dns",
+        "type": "tcp",
+        "server": "8.8.8.8",
+        "server_port": 53,
+        "detour": "proxy"
+      }
+    ],
+    "rules": [
+      {
+        "action": "route",
+        "server": "google-dns"
+      }
+    ],
+    "strategy": "ipv4_only"
+  },
   "inbounds": [
     {
       "type": "tun",
+      "tag": "tun-in",
       "interface_name": "tun0",
-      "address": ["172.19.0.1/30"],
+      "address": [
+        "172.19.0.1/30"
+      ],
       "auto_route": true,
-      "strict_route": true,
+      "strict_route": false,
       "stack": "system"
+      // "sniff" sudah dihapus dari sini, pindah ke route rules
     }
   ],
   "outbounds": [
@@ -119,12 +141,27 @@ sudo tee /etc/sing-box/config.json >/dev/null <<EOF
       "server_port": $socat_internal_port,
       "method": "2022-blake3-aes-128-gcm",
       "password": "Gn1JUS14bLUHgv1cWDDp4A==",
-      "multiplex": { "enabled": false }
+      "udp_over_tcp": true,
+      "multiplex": {
+        "enabled": false
+      }
     }
   ],
   "route": {
     "auto_detect_interface": true,
-    "rules": [{ "outbound": "proxy" }]
+    "rules": [
+      {
+        "action": "sniff",
+        "timeout": "1s"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "outbound": "proxy"
+      }
+    ]
   }
 }
 EOF

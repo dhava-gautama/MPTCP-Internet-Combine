@@ -39,5 +39,5 @@ iptables -P OUTPUT ACCEPT
 
 # 5. Reset Routing khusus VPS (jika ada)
 ip route del $IP_PUBLIC 2>/dev/null
-
+sudo systemctl stop wg-quick@wg0.service
 echo "Network flushed. System is clean."
