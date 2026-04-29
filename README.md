@@ -42,18 +42,20 @@ sudo bash clientinstall.sh
 **START AND STOP**
 
 ```bash
-sudo bash serverup.sh     # start server services
-sudo bash serverdown.sh   # stop server services
-sudo bash clientup.sh     # start client
-sudo bash clientdown.sh   # stop client
-sudo bash flushing.sh     # cleanup (server & client)
+sudo bash serverup.sh           # start server services
+sudo bash serverdown.sh         # stop server services
+sudo bash clientup.sh           # start client
+sudo bash clientdown.sh         # stop client
+sudo bash flushing.sh           # cleanup (server & client)
+sudo bash speedlimiter.sh start # apply tc rate limits
+sudo bash speedlimiter.sh stop  # remove tc rate limits
 ```
 
 Important variables (edit at top of `serverinstall.sh`)
 - `PUBLIC_IP` — public IP address of the VPS (mandatory)
 - `interface` — external network interface name (e.g. `eth0`) (mandatory)
 - `Socat_Port` — public port for the mptcpized socat listener (default `8888`)
-- `socat_internal_port` — local port where sing-box listens (default `8080`)
+- `socat_internal_port` — local port for the sing-box inbound listener on the server (default `8080`); the client has its own independent value (default `8081`) for the local socat-to-sing-box bridge
 - `WG_PORT` — WireGuard listen port (default `51820`)
 
 Security and final notes

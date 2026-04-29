@@ -18,8 +18,8 @@ ip mptcp endpoint flush
 ip mptcp limits set subflows 0 add_addr_accepted 0
 
 # 2. Clear IP Rules (kecuali rule default 0, 32766, 32767)
-ip rule | grep -vE "lookup (local|main|default)" | awk -F: '{print $1}' | while read priority; do
-    ip rule del priority $priority
+ip rule | grep -vE "lookup (local|main|default)" | awk -F: '{print $1}' | while read -r priority; do
+    ip rule del priority "$priority"
 done
 
 # 3. Clear Custom Route Tables

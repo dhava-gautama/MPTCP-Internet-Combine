@@ -70,9 +70,18 @@ ip route replace $VPS_IP via $GATEWAY2 dev $interface2
 
 
 echo "STEP 7: Configuring IPTables MASQUERADE..."
-sudo iptables -t nat -F
-sudo iptables -t nat -A POSTROUTING -o $interface1 -j MASQUERADE
-sudo iptables -t nat -A POSTROUTING -o $interface2 -j MASQUERADE
+sudo apt-get install -y iptables-persistent netfilter-persistent || true
+if ! sudo iptables -t nat -C POSTROUTING -o "$interface1" -j MASQUERADE 2>/dev/null; then
+  sudo iptables -t nat -A POSTROUTING -o "$interface1" -j MASQUERADE
+fi
+if ! sudo iptables -t nat -C POSTROUTING -o "$interface2" -j MASQUERADE 2>/dev/null; then
+  sudo iptables -t nat -A POSTROUTING -o "$interface2" -j MASQUERADE
+fi
+sudo iptables-save > /etc/iptables/rules.v4
+sudo ip6tables-save > /etc/iptables/rules.v6 2>/dev/null || true
+if command -v netfilter-persistent >/dev/null 2>&1; then
+  sudo netfilter-persistent save || true
+fi
 
 echo "STEP 8: Installing Sing-Box..."
 sudo mkdir -p /etc/apt/keyrings &&
