@@ -9,11 +9,6 @@ interface2=""
 socat_port="8888" #port to forward MPTCP traffic to sing-box
 socat_internal_port="8081" #port sing-box listen to
 
-WIREGUARD_CONFIG="
-
-
-" #paste config WireGuard client dari server
-
 
 set -Eeuo pipefail
 trap 'echo "ERROR: Install client gagal di baris $LINENO." >&2' ERR
@@ -35,19 +30,10 @@ require_var "interface1"
 require_var "interface2"
 require_var "socat_port"
 require_var "socat_internal_port"
-require_var "WIREGUARD_CONFIG"
 
-echo "STEP 1: Paste WireGuard config dari server, install WireGuard, lalu start service"
+
+echo "STEP 1: Installing MPTCPize"
 sudo apt-get update
-sudo apt-get install -y wireguard
-sudo mkdir -p /etc/wireguard
-echo "Mengisi /etc/wireguard/wg0.conf dari WIREGUARD_CONFIG..."
-sudo tee /etc/wireguard/wg0.conf >/dev/null <<EOF
-$WIREGUARD_CONFIG
-EOF
-sudo chmod 600 /etc/wireguard/wg0.conf
-sudo systemctl enable wg-quick@wg0.service
-sudo systemctl restart wg-quick@wg0.service
 sudo apt install mptcpize -y
 
 echo "STEP 2: Disabling Reverse Path Filtering (rp_filter) on eth0 and eth1..."

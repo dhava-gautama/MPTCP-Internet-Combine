@@ -4,7 +4,7 @@ PUBLIC_IP="" # IP Publik VPS
 interface=""
 Socat_Port="8888" # to client MPTCP traffic
 socat_internal_port="8080" # to sing-box
-WG_PORT="51820"
+
 
 set -Eeuo pipefail
 trap 'echo "ERROR: Install server gagal di baris $LINENO." >&2' ERR
@@ -22,7 +22,7 @@ require_var "PUBLIC_IP"
 require_var "interface"
 require_var "Socat_Port"
 require_var "socat_internal_port"
-require_var "WG_PORT"
+
 
 echo "STEP 1: Disabling Reverse Path Filtering (rp_filter)"
 sysctl -w net.mptcp.enabled=1
@@ -31,31 +31,12 @@ sudo sysctl -w net.ipv4.conf.all.rp_filter=0
 
 
 
-echo "STEP 1.5: Installing and Configuring WireGuard"
+echo "STEP 1.5: Installing MPTCPize"
 sudo apt-get update
-sudo apt-get install -y wireguard
 sudo mkdir -p /etc/wireguard
 sudo apt install mptcpize -y
-SERVER_PRIVATE_KEY="$(wg genkey)"
-SERVER_PUBLIC_KEY="$(printf '%s' "$SERVER_PRIVATE_KEY" | wg pubkey)"
-CLIENT_PRIVATE_KEY="$(wg genkey)"
-CLIENT_PUBLIC_KEY="$(printf '%s' "$CLIENT_PRIVATE_KEY" | wg pubkey)"
 
-# Overwrite wg0.conf if already exists.
-sudo tee /etc/wireguard/wg0.conf >/dev/null <<EOF
-[Interface]
-PrivateKey = $SERVER_PRIVATE_KEY
-Address = 10.8.0.1/24
-ListenPort = $WG_PORT
 
-[Peer]
-PublicKey = $CLIENT_PUBLIC_KEY
-AllowedIPs = 10.8.0.2/32
-EOF
-
-sudo chmod 600 /etc/wireguard/wg0.conf
-sudo systemctl enable wg-quick@wg0.service
-sudo systemctl restart wg-quick@wg0.service
 echo "STEP 2: Setting MPTCP Limits"
 ip mptcp limits set subflows 2 add_addr_accepted 2
 
@@ -160,21 +141,3 @@ sudo ip6tables-save > /etc/iptables/rules.v6 2>/dev/null || true
 if command -v netfilter-persistent >/dev/null 2>&1; then
   sudo netfilter-persistent save || true
 fi
-
-echo "STEP 10: Client WireGuard config (ready untuk dipaste di client)"
-echo "root@mamad:~# cat /etc/wireguard/wg0.conf"
-cat <<EOF
-ready untuk dipaste di client
-
-[Interface]
-PrivateKey = $CLIENT_PRIVATE_KEY
-Address = 10.8.0.2/24
-DNS = 8.8.8.8
-
-[Peer]
-PublicKey = $SERVER_PUBLIC_KEY
-AllowedIPs = 0.0.0.0/0
-Endpoint = $PUBLIC_IP:$WG_PORT
-PersistentKeepalive = 10
-
-EOF

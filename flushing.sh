@@ -22,9 +22,6 @@ ip rule | grep -vE "lookup (local|main|default)" | awk -F: '{print $1}' | while 
     ip rule del priority "$priority"
 done
 
-# 3. Clear Custom Route Tables
-ip route flush table 100 2>/dev/null
-
 
 # 4. Reset IPTables
 iptables -F
@@ -39,5 +36,5 @@ iptables -P OUTPUT ACCEPT
 
 # 5. Reset Routing khusus VPS (jika ada)
 ip route del $IP_PUBLIC 2>/dev/null
-sudo systemctl stop wg-quick@wg0.service
+
 echo "Network flushed. System is clean."
