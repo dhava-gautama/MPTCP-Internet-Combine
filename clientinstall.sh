@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
 VPS_IP="" #your server public IP
-IP1="" #your client IP on eth0
 IP2="" #your client IP on eth1
-GATEWAY2="" #ether2 router gateway
 interface1=""
 interface2=""
 socat_port="8888" #port to forward MPTCP traffic to sing-box
 socat_internal_port="8081" #port sing-box listen to
+keepalive_port="8010" #use whatever port not important
 
 
 set -Eeuo pipefail
@@ -23,9 +22,7 @@ require_var() {
 }
 
 require_var "VPS_IP"
-require_var "IP1"
 require_var "IP2"
-require_var "GATEWAY2"
 require_var "interface1"
 require_var "interface2"
 require_var "socat_port"
@@ -42,20 +39,24 @@ sudo sysctl -w net.ipv4.conf.$interface2.rp_filter=0
 sudo sysctl -w net.ipv4.conf.all.rp_filter=0
 
 echo "STEP 3: Enabling MPTCP..."
-sysctl -w net.mptcp.enabled=1
+sudo sysctl -w net.mptcp.enabled=1
+sudo sysctl -w net.mptcp.pm_type=0
+if [[ -e /proc/sys/net/mptcp/checksum_enabled ]]; then
+  sudo sysctl -w net.mptcp.checksum_enabled=1
+fi
 
-echo "STEP 4: Setting MPTCP Limits..."
-ip mptcp limits set subflows 2 add_addr_accepted 2
+echo "STEP 4: Disabling IPv6..."
+sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
 
-echo "STEP 5: Adding MPTCP Endpoints for Subflows..."
-ip mptcp endpoint add $IP1 dev $interface1 id 1 subflow
-ip mptcp endpoint add $IP2 dev $interface2 id 2 subflow
-
-echo "STEP 6: Setting Up Custom Routes..."
-ip route replace $VPS_IP via $GATEWAY2 dev $interface2
+echo "STEP 5: Setting MPTCP Limits and Endpoints..."
+sudo ip mptcp endpoint flush
+sudo ip mptcp limits set subflows 4 add_addr_accepted 4
+sudo ip mptcp endpoint add "$IP2" dev "$interface2" id 2 subflow
 
 
-echo "STEP 7: Configuring IPTables MASQUERADE..."
+echo "STEP 6: Configuring IPTables MASQUERADE..."
 sudo apt-get install -y iptables-persistent netfilter-persistent || true
 if ! sudo iptables -t nat -C POSTROUTING -o "$interface1" -j MASQUERADE 2>/dev/null; then
   sudo iptables -t nat -A POSTROUTING -o "$interface1" -j MASQUERADE
@@ -69,7 +70,7 @@ if command -v netfilter-persistent >/dev/null 2>&1; then
   sudo netfilter-persistent save || true
 fi
 
-echo "STEP 8: Installing Sing-Box..."
+echo "STEP 7: Installing Sing-Box..."
 sudo mkdir -p /etc/apt/keyrings &&
    sudo curl -fsSL https://sing-box.app/gpg.key -o /etc/apt/keyrings/sagernet.asc &&
    sudo chmod a+r /etc/apt/keyrings/sagernet.asc &&
@@ -84,7 +85,7 @@ Signed-By: /etc/apt/keyrings/sagernet.asc
    sudo apt-get update &&
    sudo apt-get install sing-box # or sing-box-beta
 
-echo "STEP 9: Configuring Sing-Box..."
+echo "STEP 8: Configuring Sing-Box..."
 sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
   "dns": {
@@ -152,10 +153,10 @@ sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 }
 EOF
 
-echo "STEP 10: install socat"
+echo "STEP 9: install socat"
 sudo apt install socat -y
 
-echo "STEP 11: Installing and Starting Services..."
+echo "STEP 10: Installing and Starting Services..."
 
 # 1. Sing-box Service
 sudo tee /etc/systemd/system/sing-box.service >/dev/null <<EOF
@@ -188,6 +189,25 @@ KillSignal=SIGTERM
 [Install]
 WantedBy=multi-user.target
 EOF
+
+echo "STEP 11: Installing TCP keepalive service..."
+sudo apt-get install -y curl
+sudo tee /etc/systemd/system/tcp-keepalive.service >/dev/null <<EOF
+[Unit]
+Description=TCP keepalive (curl)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bash -lc 'while true; do /usr/bin/curl -s --max-time 2 http://$VPS_IP:$keepalive_port >/dev/null; sleep 5; done'
+Restart=always
+RestartSec=3s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now tcp-keepalive.service
 
 
 echo "SETUP DONE"

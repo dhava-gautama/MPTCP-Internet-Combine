@@ -1,20 +1,21 @@
 # MPTCP Internet Combine
-Combine 2 (could add more) internet links into a single faster connection exploiting MPTCP
+Combine 2 (or more) internet links into a single faster connection using MPTCP.
 
-tool used: WireGuard, sing-box and socat.
+Tools used: sing-box, socat, mptcpize.
 
-**WARNING:** experimental scripts — use at your own risk and review scripts before
-running them on production systems.
+**WARNING:** experimental scripts — review before running on production systems.
+
+If you see "line 4: $'\r': command not found", convert line endings:
+
+```bash
+sudo sed -i 's/\r$//' "namefile".sh
+```
 
 **Requirements**
-- Linux VPS with a public IPv4 address (Ubuntu 22 - 24), check
-```bash
-uname -r
-```
-- Kernel version should be 5.14 or later
+- Linux VPS or host with a recent kernel (5.14+ recommended)
 
 **Quick start (Both server and client)**
-1. Clone the repo and open the server installer:
+1. Clone the repo:
 
 ```bash
 git clone https://github.com/mgi24/MPTCP-Internet-Combine.git
@@ -22,46 +23,55 @@ cd MPTCP-Internet-Combine
 ```
 
 **SERVER**
-1. Run the server installer (on the VPS):
+1. Edit the variables at the top of [serverinstall.sh](serverinstall.sh) (`PUBLIC_IP`, `interface`, `Socat_Port`, `socat_internal_port`) then run:
 
 ```bash
-nano serverinstall.sh   # edit variables at top (see notes below)
 sudo bash serverinstall.sh
+sudo bash serverup.sh
 ```
 
-2. The installer prints a WireGuard client config at the end — copy that output.
-
 **CLIENT**
-1. On the client machine, paste the WireGuard client config into `clientinstall.sh` and
-	 edit other client variables if needed, then run:
+1. Edit the variables at the top of [serverapply/clientinstall.sh](serverapply/clientinstall.sh) (`VPS_IP`, `IP2`, `interface1`, `interface2`, `socat_internal_port`) then run:
 
 ```bash
 sudo bash clientinstall.sh
+sudo bash clientup.sh
 ```
 
-**START AND STOP**
+**LAN Creator (optional)**
+You can create a local DHCP-enabled LAN that is ready to route traffic via the MPTCP tunnel using `lan_creator.sh`:
+
+- File: [serverapply/lan_creator.sh](serverapply/lan_creator.sh)
+- Edit the variables at the top of the script:
+  - `interface` — the local interface to host the LAN (e.g. `eth2`)
+  - `ip` — gateway IP to assign to that interface (e.g. `10.0.99.1`)
+
+Run:
+
+```bash
+sudo bash serverapply/lan_creator.sh
+```
+
+**Start and Stop**
 
 ```bash
 sudo bash serverup.sh           # start server services
 sudo bash serverdown.sh         # stop server services
-sudo bash clientup.sh           # start client
-sudo bash clientdown.sh         # stop client
+sudo bash clientup.sh           # start client services
+sudo bash clientdown.sh         # stop client services
 sudo bash flushing.sh           # cleanup (server & client)
 sudo bash speedlimiter.sh start # apply tc rate limits
 sudo bash speedlimiter.sh stop  # remove tc rate limits
 ```
 
-Important variables (edit at top of `serverinstall.sh`)
-- `PUBLIC_IP` — public IP address of the VPS (mandatory)
-- `interface` — external network interface name (e.g. `eth0`) (mandatory)
+**Important variables**
+- `PUBLIC_IP` — public IP address of the VPS (mandatory, set in [serverinstall.sh](serverinstall.sh))
+- `interface` — external network interface name (e.g. `eth0`) on the server (mandatory)
 - `Socat_Port` — public port for the mptcpized socat listener (default `8888`)
-- `socat_internal_port` — local port for the sing-box inbound listener on the server (default `8080`); the client has its own independent value (default `8081`) for the local socat-to-sing-box bridge
-- `WG_PORT` — WireGuard listen port (default `51820`)
+- `socat_internal_port` — local port for the `sing-box` inbound listener (server default `8080`, client uses `8081`)
 
-Security and final notes
-- The installer generates WireGuard keys automatically on the server and prints the
-	client private key in the generated client config — move that config to the client
-	securely and remove any copies you don't need.
-- Review and adapt firewall rules to your environment; using MASQUERADE alters
-	outbound address translation.
+**Security and final notes**
+- Review firewall rules and NAT: MASQUERADE will change outbound source addresses.
+- `rp_filter` is disabled in installers to allow asymmetric routing for MPTCP; assess your threat model before changing this.
+- Scripts are experimental: audit and test in a safe environment first.
 

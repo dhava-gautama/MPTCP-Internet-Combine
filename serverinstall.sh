@@ -25,9 +25,14 @@ require_var "socat_internal_port"
 
 
 echo "STEP 1: Disabling Reverse Path Filtering (rp_filter)"
-sysctl -w net.mptcp.enabled=1
-sysctl -w net.ipv4.ip_forward=1
+sudo sysctl -w net.mptcp.enabled=1
+sudo sysctl -w net.mptcp.pm_type=0
+if [[ -e /proc/sys/net/mptcp/checksum_enabled ]]; then
+  sudo sysctl -w net.mptcp.checksum_enabled=1
+fi
+sudo sysctl -w net.ipv4.ip_forward=1
 sudo sysctl -w net.ipv4.conf.all.rp_filter=0
+sudo sysctl -w net.ipv4.conf.$interface.rp_filter=0
 
 
 
@@ -38,10 +43,11 @@ sudo apt install mptcpize -y
 
 
 echo "STEP 2: Setting MPTCP Limits"
-ip mptcp limits set subflows 2 add_addr_accepted 2
+sudo ip mptcp endpoint flush
+sudo ip mptcp limits set subflows 4 add_addr_accepted 4
 
 echo "STEP 3: Adding MPTCP Endpoint for Signaling"
-ip mptcp endpoint add $PUBLIC_IP dev $interface signal
+sudo ip mptcp endpoint add $PUBLIC_IP dev $interface id 1 signal
 
 echo "STEP 4: Installing Sing-Box"
 
@@ -108,6 +114,8 @@ After=network.target
 ExecStart=/usr/bin/mptcpize run /usr/bin/socat TCP4-LISTEN:$Socat_Port,fork,reuseaddr TCP4:127.0.0.1:$socat_internal_port
 Restart=always
 RestartSec=5s
+SuccessExitStatus=143
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=multi-user.target
@@ -121,19 +129,6 @@ sudo apt-get install -y iptables iptables-persistent netfilter-persistent || tru
 # NAT ke interface eksternal (hanya tambah jika belum ada)
 if ! sudo iptables -t nat -C POSTROUTING -o "$interface" -j MASQUERADE 2>/dev/null; then
   sudo iptables -t nat -A POSTROUTING -o "$interface" -j MASQUERADE
-fi
-
-# NAT untuk wg0
-if ! sudo iptables -t nat -C POSTROUTING -o wg0 -j MASQUERADE 2>/dev/null; then
-  sudo iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
-fi
-
-# Forward rules (hanya tambah jika belum ada)
-if ! sudo iptables -C FORWARD -i "$interface" -o wg0 -j ACCEPT 2>/dev/null; then
-  sudo iptables -A FORWARD -i "$interface" -o wg0 -j ACCEPT
-fi
-if ! sudo iptables -C FORWARD -i wg0 -o "$interface" -j ACCEPT 2>/dev/null; then
-  sudo iptables -A FORWARD -i wg0 -o "$interface" -j ACCEPT
 fi
 
 sudo iptables-save > /etc/iptables/rules.v4
