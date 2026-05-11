@@ -85,7 +85,13 @@ Signed-By: /etc/apt/keyrings/sagernet.asc
    sudo apt-get update &&
    sudo apt-get install sing-box # or sing-box-beta
 
-echo "STEP 8: Configuring Sing-Box..."
+  echo "STEP 8: Add IP Rule for VPS tunneling exception"
+  # add ip rule idempotently so script won't fail if rule exists
+  if ! ip rule show | grep -q "to $VPS_IP"; then
+    sudo ip rule add to "$VPS_IP" lookup main pref 8999
+  fi
+
+  echo "STEP 9: Configuring Sing-Box..."
 sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
   "dns": {
@@ -153,10 +159,10 @@ sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 }
 EOF
 
-echo "STEP 9: install socat"
+echo "STEP 10: install socat"
 sudo apt install socat -y
 
-echo "STEP 10: Installing and Starting Services..."
+echo "STEP 11: Installing and Starting Services..."
 
 # 1. Sing-box Service
 sudo tee /etc/systemd/system/sing-box.service >/dev/null <<EOF
@@ -190,7 +196,7 @@ KillSignal=SIGTERM
 WantedBy=multi-user.target
 EOF
 
-echo "STEP 11: Installing TCP keepalive service..."
+echo "STEP 12: Installing TCP keepalive service..."
 sudo apt-get install -y curl
 sudo tee /etc/systemd/system/tcp-keepalive.service >/dev/null <<EOF
 [Unit]
