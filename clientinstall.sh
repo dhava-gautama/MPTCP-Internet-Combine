@@ -85,11 +85,11 @@ Signed-By: /etc/apt/keyrings/sagernet.asc
    sudo apt-get update &&
    sudo apt-get install sing-box # or sing-box-beta
 
-  echo "STEP 8: Add IP Rule for VPS tunneling exception"
-  # add ip rule idempotently so script won't fail if rule exists
-  if ! ip rule show | grep -q "to $VPS_IP"; then
-    sudo ip rule add to "$VPS_IP" lookup main pref 8999
-  fi
+echo "STEP 8: Add IP Rule for VPS tunneling exception"
+# add ip rule idempotently so script won't fail if rule exists
+if ! ip rule show | grep -q "to $VPS_IP"; then
+  sudo ip rule add to "$VPS_IP" lookup main pref 8999
+fi
 
   echo "STEP 9: Configuring Sing-Box..."
 sudo tee /etc/sing-box/config.json >/dev/null <<EOF
